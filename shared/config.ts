@@ -1,0 +1,4 @@
+export const FINGERPOINTING_CONFIG = {
+    KEYBIND: 66, // B
+    DEBOUNCE_TIME: 150,
+};

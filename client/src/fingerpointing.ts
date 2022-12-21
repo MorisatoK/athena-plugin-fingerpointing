@@ -5,22 +5,20 @@ import Raycast from '@AthenaClient/utility/raycast';
 import { FINGERPOINTING_CONFIG } from '@AthenaPlugins/athena-plugin-fingerpointing/shared/config';
 import { loadAnimation } from '@AthenaClient/systems/animations';
 
-let isFingerpointing: boolean = false;
-let cleanStart: boolean = false;
-let processingInterval: number;
-let lastBlockedTime: number = null;
-
-class FingerpointingInternal {
-    static init() {
+const FingerpointingInternal = {
+    isFingerpointing: false,
+    cleanStart: false,
+    processingInterval: null,
+    lastBlockedTime: null,
+    init() {
         KeyHeld.register(FINGERPOINTING_CONFIG.KEYBIND, FingerpointingInternal.start, FingerpointingInternal.stop);
-    }
-
-    static async start() {
-        if (isFingerpointing) {
+    },
+    async start() {
+        if (FingerpointingInternal.isFingerpointing) {
             return;
         }
 
-        isFingerpointing = true;
+        FingerpointingInternal.isFingerpointing = true;
 
         try {
             await loadAnimation('anim@mp_point');
@@ -36,30 +34,29 @@ class FingerpointingInternal {
                 24,
             );
 
-            cleanStart = true;
-            processingInterval = alt.setInterval(FingerpointingInternal.process, 10); // was 0 before
+            FingerpointingInternal.cleanStart = true;
+            FingerpointingInternal.processingInterval = alt.setInterval(FingerpointingInternal.process, 10);
         } catch (e) {
             alt.log(e);
         }
-    }
-
-    static stop() {
-        if (!isFingerpointing) {
+    },
+    stop() {
+        if (!FingerpointingInternal.isFingerpointing) {
             return;
         }
 
-        if (processingInterval) {
-            alt.clearInterval(processingInterval);
+        if (FingerpointingInternal.processingInterval) {
+            alt.clearInterval(FingerpointingInternal.processingInterval);
         }
 
-        processingInterval = null;
-        isFingerpointing = false;
+        FingerpointingInternal.processingInterval = null;
+        FingerpointingInternal.isFingerpointing = false;
 
-        if (!cleanStart) {
+        if (!FingerpointingInternal.cleanStart) {
             return;
         }
 
-        cleanStart = false;
+        FingerpointingInternal.cleanStart = false;
 
         natives.requestTaskMoveNetworkStateTransition(alt.Player.local.scriptID, 'Stop');
 
@@ -73,16 +70,14 @@ class FingerpointingInternal {
 
         natives.setPedConfigFlag(alt.Player.local.scriptID, 36, false);
         natives.clearPedSecondaryTask(alt.Player.local.scriptID);
-    }
-
-    static getRelativePitch() {
+    },
+    getRelativePitch() {
         const camRot = natives.getGameplayCamRot(2);
 
         return camRot.x - natives.getEntityPitch(alt.Player.local.scriptID);
-    }
-
-    static process() {
-        if (!isFingerpointing) {
+    },
+    process() {
+        if (!FingerpointingInternal.isFingerpointing) {
             return;
         }
 
@@ -108,8 +103,8 @@ class FingerpointingInternal {
 
         const raycast = Raycast.simpleRaycast(95, 0.2, true, 1);
 
-        if (raycast.didHit && lastBlockedTime === null) {
-            lastBlockedTime = Date.now();
+        if (raycast.didHit && FingerpointingInternal.lastBlockedTime === null) {
+            FingerpointingInternal.lastBlockedTime = Date.now();
         }
 
         natives.setTaskMoveNetworkSignalFloat(alt.Player.local.scriptID, 'Pitch', camPitch);
@@ -125,21 +120,20 @@ class FingerpointingInternal {
             'isFirstPerson',
             natives.getCamViewModeForContext(natives.getCamActiveViewModeContext()) === 4,
         );
-    }
-
-    static isBlockingAllowed() {
-        const isAllowed = Date.now() - lastBlockedTime > FINGERPOINTING_CONFIG.DEBOUNCE_TIME;
+    },
+    isBlockingAllowed() {
+        const isAllowed = Date.now() - FingerpointingInternal.lastBlockedTime > FINGERPOINTING_CONFIG.DEBOUNCE_TIME;
 
         if (isAllowed) {
-            lastBlockedTime = null;
+            FingerpointingInternal.lastBlockedTime = null;
         }
 
         return isAllowed;
-    }
-}
+    },
+};
 
-export class Fingerpointing {
-    static init() {
+export const Fingerpointing = {
+    init() {
         FingerpointingInternal.init();
-    }
-}
+    },
+};
